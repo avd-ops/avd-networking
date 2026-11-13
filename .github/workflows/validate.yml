@@ -1,0 +1,39 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Bicep templates
+        run: |
+          az bicep install
+          az bicep lint --file bicep/main.bicep
+      - name: Build parameter files (commercial)
+        run: |
+          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam; do
+            az bicep build-params --file "$p" --stdout > /dev/null
+          done
+      - name: Build parameter files (usgov) and verify sovereign DNS suffixes
+        env:
+          AVD_CLOUD: "usgov"
+          AVD_LOCATION: "usgovvirginia"
+        run: |
+          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam; do
+            out=$(az bicep build-params --file "$p" --stdout | jq -r .parametersJson)
+            echo "$out" | grep -q '"usgov"'
+            echo "$out" | grep -q '"usgovvirginia"'
+          done
+          compiled=$(az bicep build --file bicep/modules/dns.bicep --stdout)
+          echo "$compiled" | grep -q "privatelink.wvd.azure.us"
+          echo "$compiled" | grep -q "privatelink-global.wvd.azure.us"
+      - name: ShellCheck deploy script
+        run: shellcheck scripts/deploy/deploy.sh
