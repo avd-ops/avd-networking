@@ -16,10 +16,10 @@ Platform Connectivity control plane (`avd-networking`), orchestrated by [avd-lan
 
 ## What it does
 
-- Deploys an enterprise Hub VNet (`GatewaySubnet`, `AzureFirewallSubnet`, `AzureBastionSubnet`, DNS Private Resolver subnets) with `defaultOutboundAccess: false`.
-- Configures Azure Firewall (`Basic` in `lab`, `Standard`/`Premium` with multi-PIP SNAT scaling in `enterprise`) and Firewall Policy rules aligned with `avd-assess` required endpoints (including optional RDP Shortpath UDP 3478).
-- Deploys central Private DNS zones (`file`, `keyVault`, `avd`, `avdGlobal`) for `commercial` and `usgov` and optional Azure DNS Private Resolver.
-- Supports optional Standard Azure Bastion, optional VPN/ExpressRoute gateways (off by default), and VNet Flow Logs.
+- Deploys an enterprise Hub VNet (`GatewaySubnet`, `AzureFirewallSubnet`, `AzureBastionSubnet`, DNS Private Resolver subnets, optional NVA untrusted/trusted subnets, and `additionalSubnets` for 3rd-party appliances) with `defaultOutboundAccess: false` — or wraps an existing/3rd-party hub VNet via `existingHubVnetResourceId`.
+- Supports `firewallMode`: `'azure-firewall'` (`Basic` in `lab`, `Standard`/`Premium` with multi-PIP SNAT scaling in `enterprise`, aligned with `avd-assess` required endpoints and optional RDP Shortpath UDP 3478), `'nva'` (3rd-party NVA/firewall private IP emitted as `hubFirewallPrivateIp` in C31), or `'none'`.
+- Deploys central Private DNS zones (`file`, `keyVault`, `avd`, `avdGlobal`) for `commercial` and `usgov`, optional Azure DNS Private Resolver, and `customDnsServers` override for 3rd-party/on-prem DNS.
+- Supports optional Standard Azure Bastion, VNet Flow Logs, and full VPN / ExpressRoute / coexistence (`Both`) gateway configurations (Active-Active VPN, BGP, Local Network Gateways, IPsec S2S connections, ExpressRoute circuits with FastPath and `ErGwScale`), off by default.
 - Emits `networking-outputs.json` (`avd-networking-outputs/v1`, contract C31) consumed by `avd-azure` in `HubPeered` mode, plus `Add-SpokeLink.ps1` for two-phase cross-subscription peering and DNS linking.
 
 ## Contributing
