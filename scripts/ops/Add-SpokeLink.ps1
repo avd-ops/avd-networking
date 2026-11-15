@@ -18,7 +18,9 @@ param(
 
     [string]$SpokeName = 'avd-spoke',
 
-    [switch]$AllowGatewayTransit
+    [switch]$AllowGatewayTransit,
+
+    [switch]$DnsLinksOnly
 )
 
 Set-StrictMode -Version Latest
@@ -37,7 +39,7 @@ $hubRg = $Matches[2]
 $hubVnetName = $Matches[3]
 
 $peeringName = "peer-hub-to-$SpokeName"
-if ($PSCmdlet.ShouldProcess($hubVnetName, "Create hub-to-spoke peering $peeringName")) {
+if (-not $DnsLinksOnly -and $PSCmdlet.ShouldProcess($hubVnetName, "Create hub-to-spoke peering $peeringName")) {
     $args = @(
         'network', 'vnet', 'peering', 'create',
         '--subscription', $hubSub,
