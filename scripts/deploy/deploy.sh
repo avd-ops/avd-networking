@@ -3,14 +3,15 @@
 set -euo pipefail
 
 PARAM_FILE="parameters/lab.bicepparam"
-LOCATION="eastus2"
+CLOUD="${AVD_CLOUD:-commercial}"
+LOCATION="${AVD_LOCATION:-eastus2}"
 RESOURCE_GROUP="rg-avd-hub-dev"
 OUTPUT_FILE="networking-outputs.json"
 WHAT_IF=false
 
 usage() {
   cat <<EOF
-Usage: $0 [-p <param-file>] [-l <location>] [-g <resource-group>] [-o <output-file>] [--what-if]
+Usage: $0 [-p <param-file>] [--cloud commercial|usgov] [-l <location>] [-g <resource-group>] [-o <output-file>] [--what-if]
 EOF
   exit 1
 }
@@ -18,6 +19,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -p|--param-file) PARAM_FILE="$2"; shift 2 ;;
+    --cloud) CLOUD="$2"; shift 2 ;;
     -l|--location) LOCATION="$2"; shift 2 ;;
     -g|--resource-group) RESOURCE_GROUP="$2"; shift 2 ;;
     -o|--output-file) OUTPUT_FILE="$2"; shift 2 ;;
@@ -26,6 +28,22 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown argument: $1" >&2; usage ;;
   esac
 done
+
+CLOUD="${CLOUD,,}"
+[[ "$CLOUD" == commercial || "$CLOUD" == usgov ]] || { echo "--cloud takes commercial or usgov: '$CLOUD'" >&2; exit 1; }
+USGOV_REGIONS=" usgovvirginia usgovarizona usgovtexas "
+if [[ "$CLOUD" == usgov && "$USGOV_REGIONS" != *" ${LOCATION,,} "* ]]; then
+  echo "Azure US Government deployments require a US Gov region (usgovvirginia, usgovarizona, usgovtexas); got '$LOCATION'." >&2
+  exit 1
+fi
+ACTIVE_AZ_CLOUD=$(az cloud show --query name -o tsv 2>/dev/null || true)
+EXPECTED_AZ_CLOUD=$([[ "$CLOUD" == usgov ]] && echo "AzureUSGovernment" || echo "AzureCloud")
+if [[ -n "$ACTIVE_AZ_CLOUD" && "$ACTIVE_AZ_CLOUD" != "$EXPECTED_AZ_CLOUD" ]]; then
+  echo "Active az cloud is '$ACTIVE_AZ_CLOUD', expected '$EXPECTED_AZ_CLOUD' for --cloud $CLOUD." >&2
+  exit 1
+fi
+export AVD_CLOUD="$CLOUD"
+export AVD_LOCATION="$LOCATION"
 
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
 
