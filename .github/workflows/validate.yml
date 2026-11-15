@@ -19,7 +19,7 @@ jobs:
           az bicep lint --file bicep/main.bicep
       - name: Build parameter files (commercial)
         run: |
-          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam; do
+          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam parameters/nva-hybrid.bicepparam parameters/expressroute-enterprise.bicepparam; do
             az bicep build-params --file "$p" --stdout > /dev/null
           done
       - name: Build parameter files (usgov) and verify sovereign DNS suffixes
@@ -27,7 +27,7 @@ jobs:
           AVD_CLOUD: "usgov"
           AVD_LOCATION: "usgovvirginia"
         run: |
-          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam; do
+          for p in parameters/lab.bicepparam parameters/enterprise.bicepparam parameters/nva-hybrid.bicepparam parameters/expressroute-enterprise.bicepparam; do
             out=$(az bicep build-params --file "$p" --stdout | jq -r .parametersJson)
             echo "$out" | grep -q '"usgov"'
             echo "$out" | grep -q '"usgovvirginia"'

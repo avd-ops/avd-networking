@@ -6,7 +6,10 @@ param tags object
 param vnetName string
 param addressPrefix string
 
+param deployGatewaySubnet bool = true
 param gatewaySubnetPrefix string
+param gatewaySubnetRouteTableId string = ''
+param deployAzureFirewallSubnet bool = true
 param firewallSubnetPrefix string
 param deployFirewallManagementSubnet bool = false
 param firewallManagementSubnetPrefix string = ''
@@ -15,23 +18,44 @@ param bastionSubnetPrefix string = ''
 param deployDnsResolverSubnets bool = false
 param dnsInboundSubnetPrefix string = ''
 param dnsOutboundSubnetPrefix string = ''
+param deployNvaSubnets bool = false
+param nvaUntrustedSubnetPrefix string = ''
+param nvaTrustedSubnetPrefix string = ''
+@description('Additional custom subnets for 3rd-party networking appliances (e.g., SD-WAN, Aviatrix, Megaport): [{ name, addressPrefix, delegations?, serviceEndpoints?, routeTableId?, nsgId? }]')
+param additionalSubnets array = []
 
-var baseSubnets = [
-  {
-    name: 'GatewaySubnet'
-    properties: {
-      addressPrefix: gatewaySubnetPrefix
-      defaultOutboundAccess: false
-    }
-  }
-  {
-    name: 'AzureFirewallSubnet'
-    properties: {
-      addressPrefix: firewallSubnetPrefix
-      defaultOutboundAccess: false
-    }
-  }
-]
+var gatewaySubnet = deployGatewaySubnet
+  ? [
+      {
+        name: 'GatewaySubnet'
+        properties: union(
+          {
+            addressPrefix: gatewaySubnetPrefix
+            defaultOutboundAccess: false
+          },
+          !empty(gatewaySubnetRouteTableId)
+            ? {
+                routeTable: {
+                  id: gatewaySubnetRouteTableId
+                }
+              }
+            : {}
+        )
+      }
+    ]
+  : []
+
+var azureFirewallSubnet = deployAzureFirewallSubnet
+  ? [
+      {
+        name: 'AzureFirewallSubnet'
+        properties: {
+          addressPrefix: firewallSubnetPrefix
+          defaultOutboundAccess: false
+        }
+      }
+    ]
+  : []
 
 var fwMgmtSubnet = deployFirewallManagementSubnet
   ? [
@@ -92,6 +116,41 @@ var dnsSubnets = deployDnsResolverSubnets
     ]
   : []
 
+var nvaSubnets = deployNvaSubnets
+  ? [
+      {
+        name: 'snet-nva-untrusted'
+        properties: {
+          addressPrefix: nvaUntrustedSubnetPrefix
+          defaultOutboundAccess: false
+        }
+      }
+      {
+        name: 'snet-nva-trusted'
+        properties: {
+          addressPrefix: nvaTrustedSubnetPrefix
+          defaultOutboundAccess: false
+        }
+      }
+    ]
+  : []
+
+var extraSubnets = [
+  for s in additionalSubnets: {
+    name: s.name
+    properties: union(
+      {
+        addressPrefix: s.addressPrefix
+        defaultOutboundAccess: false
+      },
+      contains(s, 'delegations') && !empty(s.delegations) ? { delegations: s.delegations } : {},
+      contains(s, 'serviceEndpoints') && !empty(s.serviceEndpoints) ? { serviceEndpoints: s.serviceEndpoints } : {},
+      contains(s, 'routeTableId') && !empty(s.routeTableId) ? { routeTable: { id: s.routeTableId } } : {},
+      contains(s, 'nsgId') && !empty(s.nsgId) ? { networkSecurityGroup: { id: s.nsgId } } : {}
+    )
+  }
+]
+
 resource hubVnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: vnetName
   location: location
@@ -102,15 +161,17 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
         addressPrefix
       ]
     }
-    subnets: concat(baseSubnets, fwMgmtSubnet, bastionSubnet, dnsSubnets)
+    subnets: concat(gatewaySubnet, azureFirewallSubnet, fwMgmtSubnet, bastionSubnet, dnsSubnets, nvaSubnets, extraSubnets)
   }
 }
 
 output vnetResourceId string = hubVnet.id
 output vnetName string = hubVnet.name
-output gatewaySubnetId string = '${hubVnet.id}/subnets/GatewaySubnet'
-output firewallSubnetId string = '${hubVnet.id}/subnets/AzureFirewallSubnet'
+output gatewaySubnetId string = deployGatewaySubnet ? '${hubVnet.id}/subnets/GatewaySubnet' : ''
+output firewallSubnetId string = deployAzureFirewallSubnet ? '${hubVnet.id}/subnets/AzureFirewallSubnet' : ''
 output firewallManagementSubnetId string = deployFirewallManagementSubnet ? '${hubVnet.id}/subnets/AzureFirewallManagementSubnet' : ''
 output bastionSubnetId string = deployBastionSubnet ? '${hubVnet.id}/subnets/AzureBastionSubnet' : ''
 output dnsInboundSubnetId string = deployDnsResolverSubnets ? '${hubVnet.id}/subnets/snet-dns-inbound' : ''
 output dnsOutboundSubnetId string = deployDnsResolverSubnets ? '${hubVnet.id}/subnets/snet-dns-outbound' : ''
+output nvaUntrustedSubnetId string = deployNvaSubnets ? '${hubVnet.id}/subnets/snet-nva-untrusted' : ''
+output nvaTrustedSubnetId string = deployNvaSubnets ? '${hubVnet.id}/subnets/snet-nva-trusted' : ''
