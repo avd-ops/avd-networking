@@ -100,5 +100,5 @@ output fileZoneResourceId string = deployPrivateDnsZones ? privateDnsZones[0].id
 output keyVaultZoneResourceId string = deployPrivateDnsZones ? privateDnsZones[1].id : ''
 output avdZoneResourceId string = deployPrivateDnsZones ? privateDnsZones[2].id : ''
 output avdGlobalZoneResourceId string = deployPrivateDnsZones ? privateDnsZones[3].id : ''
-output resolverInboundIp string = deployPrivateResolver ? inboundEndpoint.properties.ipConfigurations[0].privateIpAddress : ''
+output resolverInboundIp string = deployPrivateResolver ? inboundEndpoint!.properties.ipConfigurations[0].privateIpAddress : ''
 output resolverOutboundEndpointId string = deployPrivateResolver ? outboundEndpoint.id : ''
