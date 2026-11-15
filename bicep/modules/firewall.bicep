@@ -26,6 +26,7 @@ param logAnalyticsWorkspaceResourceId string = ''
 
 var isBasic = skuTier == 'Basic'
 var effectivePipCount = isBasic ? 1 : publicIpCount
+var loginHost = replace(replace(az.environment().authentication.loginEndpoint, 'https://', ''), '/', '')
 
 resource dataPips 'Microsoft.Network/publicIPAddresses@2024-05-01' = [
   for i in range(0, effectivePipCount): {
@@ -136,6 +137,26 @@ resource avdRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollecti
             ]
             sourceAddresses: spokeAddressSpaces
             fqdnTags: ['WindowsVirtualDesktop', 'WindowsUpdate', 'AzureBackup']
+          }
+          {
+            ruleType: 'ApplicationRule'
+            name: 'allow-entra-id-join'
+            protocols: [
+              {
+                protocolType: 'Https'
+                port: 443
+              }
+            ]
+            sourceAddresses: spokeAddressSpaces
+            targetFqdns: [
+              'enterpriseregistration.windows.net'
+              loginHost
+              'device.${loginHost}'
+              'pas.windows.net'
+              'autologon.microsoftazuread-sso.com'
+              '*.msauth.net'
+              '*.msftauth.net'
+            ]
           }
         ]
       }
