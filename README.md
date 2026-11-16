@@ -5,10 +5,10 @@ Part of [avd-ops](https://avd-ops.dev/), the open toolkit for Azure Virtual Desk
 Platform Connectivity control plane (`avd-networking`), orchestrated by [avd-landing-zone](https://github.com/avd-ops/avd-landing-zone#readme) ([avd-ops docs](https://avd-ops.dev/docs/repos/avd-networking.html), [decision 0014](https://avd-ops.dev/docs/decisions/0014-add-avd-networking-connectivity-control-plane.html)).
 
 > [!WARNING]
-> **Personal project. Research and learning only. Not for production. No warranty.**
+> **Community research project. Use at your own risk. No warranty.**
 >
 > - This is my own personal project, built on my own time **for research and learning**. It is **not affiliated with, endorsed by or supported by my employer**, Liquidware, ServiceNow or Microsoft, and it does not represent their views, products or guidance.
-> - **Do not run any of it in production** or against subscriptions and tenants that matter. Test it first in a dedicated lab subscription and tenant.
+> - Test it first in a dedicated lab subscription and tenant before using it in production; you are responsible for reviewing the code and validating it for your environment.
 > - It is provided **"as is", without warranty of any kind**, under the [MIT License](LICENSE). You use it at your own risk.
 > - **Contributions and forks are welcome and encouraged.** See [Contributing](#contributing).
 
@@ -23,7 +23,7 @@ Platform Connectivity control plane (`avd-networking`), orchestrated by [avd-lan
 
 ## What it does
 
-- Deploys an enterprise Hub VNet (`GatewaySubnet`, `AzureFirewallSubnet`, `AzureBastionSubnet`, DNS Private Resolver subnets, optional NVA untrusted/trusted subnets, and `additionalSubnets` for 3rd-party appliances) with `defaultOutboundAccess: false` — or wraps an existing/3rd-party hub VNet via `existingHubVnetResourceId`.
+- Deploys an enterprise Hub VNet (`GatewaySubnet`, `AzureFirewallSubnet`, `AzureBastionSubnet`, DNS Private Resolver subnets, optional NVA untrusted/trusted subnets, and `additionalSubnets` for 3rd-party appliances) with `defaultOutboundAccess: false` â€” or wraps an existing/3rd-party hub VNet via `existingHubVnetResourceId`.
 - Supports `firewallMode`: `'azure-firewall'` (`Basic` in `lab`, `Standard`/`Premium` with multi-PIP SNAT scaling in `enterprise`, aligned with [avd-assess](https://github.com/avd-ops/avd-assess#readme) required endpoints and optional RDP Shortpath UDP 3478), `'nva'` (3rd-party NVA/firewall private IP emitted as `hubFirewallPrivateIp` in C31), or `'none'`.
 - Deploys central Private DNS zones (`file`, `keyVault`, `avd`, `avdGlobal`) for `commercial` and `usgov`, optional Azure DNS Private Resolver, and `customDnsServers` override for 3rd-party/on-prem DNS.
 - Supports optional Standard Azure Bastion, VNet Flow Logs, and full VPN / ExpressRoute / coexistence (`Both`) gateway configurations (Active-Active VPN, BGP, Local Network Gateways, IPsec S2S connections, ExpressRoute circuits with FastPath and `ErGwScale`), off by default.
@@ -40,4 +40,4 @@ Fork it, open an issue or a pull request. Follow the family guardrails in [AGENT
 
 ## License and disclaimer
 
-[MIT](LICENSE). Personal project, not for production, provided as is, not affiliated with the author's employer, Liquidware, ServiceNow or Microsoft.
+[MIT](LICENSE). Community research project, provided as is, use at your own risk, not affiliated with the author's employer, Liquidware, ServiceNow or Microsoft.
