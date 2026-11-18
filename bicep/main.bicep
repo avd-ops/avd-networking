@@ -62,6 +62,11 @@ param firewallSkuTier string = profile == 'lab' ? 'Basic' : 'Standard'
 param firewallPublicIpCount int = profile == 'lab' ? 1 : 2
 param enableShortpathPublic bool = true
 
+param deployOssNva bool = false
+param ossNvaVmSize string = 'Standard_B1s'
+param ossNvaAdminUsername string = 'avdnva'
+param ossNvaAdminSshPublicKey string = ''
+
 param deployPrivateDnsZones bool = true
 param deployPrivateResolver bool = profile == 'enterprise'
 param customDnsServers array = []
@@ -103,7 +108,8 @@ param expressRouteAutoScaleMaxUnits int = 0
 param existingLogAnalyticsWorkspaceResourceId string = ''
 
 var useExistingHub = !empty(existingHubVnetResourceId)
-var effectiveFirewallMode = !deployFirewall ? (empty(nvaPrivateIp) ? 'none' : 'nva') : firewallMode
+var effectiveDeployNvaSubnets = deployNvaSubnets || deployOssNva
+var effectiveFirewallMode = !deployFirewall ? (deployOssNva || !empty(nvaPrivateIp) ? 'nva' : 'none') : firewallMode
 var effectiveFwMgmt = !useExistingHub && effectiveFirewallMode == 'azure-firewall' && firewallSkuTier == 'Basic'
 var hubVnetName = 'vnet-${namePrefix}-${environment}'
 
@@ -144,7 +150,7 @@ module hub 'modules/hub.bicep' = if (!useExistingHub) {
     deployDnsResolverSubnets: effectiveDeployPrivateResolver
     dnsInboundSubnetPrefix: dnsInboundSubnetPrefix
     dnsOutboundSubnetPrefix: dnsOutboundSubnetPrefix
-    deployNvaSubnets: deployNvaSubnets
+    deployNvaSubnets: effectiveDeployNvaSubnets
     nvaUntrustedSubnetPrefix: nvaUntrustedSubnetPrefix
     nvaTrustedSubnetPrefix: nvaTrustedSubnetPrefix
     additionalSubnets: additionalSubnets
@@ -169,6 +175,22 @@ module firewall 'modules/firewall.bicep' = if (deployAzureFirewall) {
     enableShortpathPublic: enableShortpathPublic
     enableDnsProxy: firewallSkuTier != 'Basic'
     logAnalyticsWorkspaceResourceId: workspaceId
+  }
+}
+
+module ossNva 'modules/oss-nva.bicep' = if (!useExistingHub && deployOssNva) {
+  name: 'connectivity-oss-nva'
+  params: {
+    location: location
+    tags: tags
+    namePrefix: namePrefix
+    environment: environment
+    subnetId: hub!.outputs.nvaTrustedSubnetId
+    spokeAddressSpaces: spokeAddressSpaces
+    vmSize: ossNvaVmSize
+    adminUsername: ossNvaAdminUsername
+    adminSshPublicKey: ossNvaAdminSshPublicKey
+    enableShortpathPublic: enableShortpathPublic
   }
 }
 
@@ -226,12 +248,14 @@ module gateway 'modules/gateway.bicep' = if (effectiveDeployGateway) {
 
 var fwPrivateIp = deployAzureFirewall
   ? firewall!.outputs.firewallPrivateIp
-  : (effectiveFirewallMode == 'nva' ? nvaPrivateIp : '')
+  : (!useExistingHub && deployOssNva
+      ? ossNva!.outputs.nvaPrivateIp
+      : (effectiveFirewallMode == 'nva' ? nvaPrivateIp : ''))
 var dnsServersOut = !empty(customDnsServers)
   ? customDnsServers
   : (effectiveDeployPrivateResolver
       ? [dns.outputs.resolverInboundIp]
-      : (deployAzureFirewall && firewallSkuTier != 'Basic' ? [fwPrivateIp] : []))
+      : ((deployAzureFirewall && firewallSkuTier != 'Basic') || (!useExistingHub && deployOssNva) ? [fwPrivateIp] : []))
 
 // C31: avd-networking-outputs/v1
 output networkingOutputs object = {
