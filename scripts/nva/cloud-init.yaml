@@ -5,6 +5,9 @@ packages:
   - squid-openssl
   - openssl
   - dnsmasq
+  - tcpdump
+  - conntrack
+  - unattended-upgrades
 
 write_files:
   - path: /etc/sysctl.d/99-nva.conf
@@ -149,6 +152,32 @@ write_files:
       .delivery.mp.microsoft.com
       .wdcp.microsoft.com
 
+  - path: /etc/logrotate.d/nva
+    permissions: '0644'
+    content: |
+      /var/log/squid/access.log /var/log/squid/cache.log /var/log/dnsmasq.log {
+          daily
+          rotate 7
+          maxsize 100M
+          missingok
+          notifempty
+          compress
+          delaycompress
+          sharedscripts
+          postrotate
+              systemctl reload squid >/dev/null 2>&1 || true
+              systemctl kill -s HUP dnsmasq >/dev/null 2>&1 || true
+          endscript
+      }
+
+  - path: /etc/squid/blocked_doh.txt
+    permissions: '0644'
+    content: |
+      .dns.google
+      .cloudflare-dns.com
+      .mozilla.cloudflare-dns.com
+      .quad9.net
+
   - path: /etc/squid/squid.conf
     permissions: '0644'
     content: |
@@ -167,7 +196,7 @@ write_files:
       acl spoke_net src __SPOKE_CIDRS_SQUID__
       acl step1 at_step SslBump1
       acl allowed_domains dstdomain "/etc/squid/allowed_domains.txt"
-      acl blocked_doh ssl::server_name .dns.google .cloudflare-dns.com .mozilla.cloudflare-dns.com .quad9.net
+      acl blocked_doh ssl::server_name "/etc/squid/blocked_doh.txt"
       acl allowed_sni ssl::server_name "/etc/squid/allowed_domains.txt"
 
       http_access allow spoke_net allowed_domains
