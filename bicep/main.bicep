@@ -45,7 +45,7 @@ param additionalSubnets array = []
 param spokeAddressSpaces array = ['10.100.0.0/16']
 param availabilityZones string[] = []
 
-param deployFirewall bool = true
+param deployFirewall bool = profile == 'enterprise'
 @allowed([
   'azure-firewall'
   'nva'
