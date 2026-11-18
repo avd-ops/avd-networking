@@ -1,0 +1,124 @@
+{
+  "schema": "avd-egress-policy/v1",
+  "description": "Portable AVD egress policy compiled to oss-nva (nftables + squid), azure-firewall, or palo-alto (PAN-OS EDL).",
+  "fqdnRules": [
+    {
+      "name": "avd-control-plane",
+      "action": "allow",
+      "clouds": ["commercial"],
+      "protocols": ["https"],
+      "domains": [
+        "*.wvd.microsoft.com",
+        "*.servicebus.windows.net",
+        "*.azure-devices.net",
+        "*.prod.warm.ingest.monitor.core.windows.net"
+      ]
+    },
+    {
+      "name": "avd-control-plane-usgov",
+      "action": "allow",
+      "clouds": ["usgov"],
+      "protocols": ["https"],
+      "domains": [
+        "*.wvd.azure.us",
+        "*.servicebus.usgovcloudapi.net",
+        "*.azure-devices.us"
+      ]
+    },
+    {
+      "name": "entra-auth",
+      "action": "allow",
+      "clouds": ["commercial"],
+      "protocols": ["https"],
+      "domains": [
+        "*.login.microsoftonline.com",
+        "*.login.live.com",
+        "*.aadcdn.msftauth.net",
+        "*.msftauth.net",
+        "*.msauth.net",
+        "*.microsoftonline.com",
+        "*.graph.microsoft.com"
+      ]
+    },
+    {
+      "name": "entra-auth-usgov",
+      "action": "allow",
+      "clouds": ["usgov"],
+      "protocols": ["https"],
+      "domains": [
+        "*.login.microsoftonline.us",
+        "*.graph.microsoft.us",
+        "*.aadcdn.msftauth.net",
+        "*.msftauth.net",
+        "*.msauth.net"
+      ]
+    },
+    {
+      "name": "windows-pki-kms",
+      "action": "allow",
+      "clouds": ["commercial", "usgov"],
+      "protocols": ["http", "https"],
+      "domains": [
+        "*.msftconnecttest.com",
+        "azkms.core.windows.net",
+        "kms.core.windows.net",
+        "azkms.core.usgovcloudapi.net",
+        "crl.microsoft.com",
+        "oneocsp.microsoft.com",
+        "*.digicert.com",
+        "*.globalsign.com"
+      ]
+    },
+    {
+      "name": "windows-update-defender",
+      "action": "allow",
+      "clouds": ["commercial", "usgov"],
+      "protocols": ["http", "https"],
+      "domains": [
+        "*.windowsupdate.com",
+        "*.update.microsoft.com",
+        "*.delivery.mp.microsoft.com",
+        "*.wdcp.microsoft.com"
+      ]
+    },
+    {
+      "name": "block-doh-bypass",
+      "action": "deny",
+      "clouds": ["commercial", "usgov"],
+      "protocols": ["https"],
+      "domains": [
+        "*.dns.google",
+        "*.cloudflare-dns.com",
+        "*.mozilla.cloudflare-dns.com",
+        "*.quad9.net"
+      ]
+    }
+  ],
+  "networkRules": [
+    {
+      "name": "allow-ntp",
+      "action": "allow",
+      "protocol": "udp",
+      "ports": ["123"],
+      "destination": "internet",
+      "enabled": true
+    },
+    {
+      "name": "block-external-dns-dot",
+      "action": "deny",
+      "protocol": "any",
+      "ports": ["53", "853"],
+      "destination": "internet",
+      "enabled": true
+    },
+    {
+      "name": "allow-rdp-shortpath-stun",
+      "action": "allow",
+      "protocol": "udp",
+      "ports": ["3478"],
+      "destination": "internet",
+      "enabled": false,
+      "flag": "enableShortpathPublic"
+    }
+  ]
+}
